@@ -2,6 +2,11 @@ package com.github.bddcoverage.exampleproject.bdd;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+import org.jacoco.agent.rt.internal.Agent;
+import org.jacoco.agent.rt.internal.IExceptionLogger;
+import org.jacoco.core.runtime.AgentOptions;
+import org.jbehave.core.annotations.AfterScenario;
+import org.jbehave.core.annotations.BeforeScenario;
 import org.jbehave.core.annotations.Given;
 import org.jbehave.core.annotations.Named;
 import org.jbehave.core.annotations.Then;
@@ -13,6 +18,7 @@ public class HelloWorldSteps {
 
     private HelloWorld helloWorld;
     private String generatedGreeting;
+    private Agent agent;
 
     @Given("a running app")
     public void theAppIsRunning() {
@@ -29,4 +35,28 @@ public class HelloWorldSteps {
         assertThat(generatedGreeting, equalTo(expectedMessage));
     }
 
+    @BeforeScenario
+    public void setupCoverageAgent() {
+      AgentOptions options = new AgentOptions();
+      options.setSessionId("A random sessionid in options"); // FIXME needs to come from the current session
+      options.setDestfile("bdd_coverage.exec");
+      IExceptionLogger exceptionLogger = new IExceptionLogger() {
+
+        public void logExeption(Exception ex) {
+          ex.printStackTrace();
+        }
+      };
+      agent = new Agent(options, exceptionLogger);
+      agent.startup();
+    }
+    @AfterScenario
+    public void recordScenarioCoverage() {
+      try {
+        agent.dump(true);
+      } catch (Throwable e) {
+        e.printStackTrace();
+      } finally {
+        agent.shutdown();
+      }
+    }
 }
